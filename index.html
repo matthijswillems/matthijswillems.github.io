@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title></title>
+    <meta charset="utf-8" />
+    <meta name="generator" content="Three.js Editor" />
+    <meta
+      name="viewport"
+      content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0"
+    />
+    <style>
+      body {
+        font-family: sans-serif;
+        font-size: 11px;
+        background-color: white;
+        margin: 0px;
+      }
+      canvas {
+        display: block;
+      }
+    </style>
+  </head>
+  <body ontouchstart="">
+    <!-- NOTE: ADDED IMPORTMAP -->
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.150.1/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.150.1/examples/jsm/"
+        }
+      }
+    </script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.4/gsap.min.js"
+      integrity="sha512-f8mwTB+Bs8a5c46DEm7HQLcJuHMBaH/UFlcgyetMqqkvTcYg4g5VXsYR71b3qC82lZytjNYvBj2pf0VekA9/FQ=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    ></script>
+    <script type="module">
+      //NOTE: Use three from import map
+      import * as THREE from "three";
+      import { APP } from "./js/app.js";
+      import { VRButton } from "./js/VRButton.js";
+      import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+      import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+
+      window.THREE = THREE; // Used by APP Scripts.
+      window.VRButton = VRButton; // Used by APP Scripts.
+
+      THREE.ColorManagement.enabled = true;
+
+      let LOCAL_MODEL_URL = "./citiz_platinum_titan_d140_me.glb";
+
+      var loader = new THREE.FileLoader();
+      var localLoader = new GLTFLoader();
+      var loadProgress;
+
+      loader.load("app.json", function (text) {
+        console.log("loaded scene settings");
+
+        var player = new APP.Player();
+        player.load(JSON.parse(text));
+        player.setSize(window.innerWidth, window.innerHeight);
+
+        document.body.appendChild(player.dom);
+
+        window.addEventListener("resize", function () {
+          player.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        //NOTE: INSERT CODE HERE
+        console.log(player.camera);
+        const canvas = player.dom.querySelector("canvas");
+        const controls = new OrbitControls(player.camera, canvas);
+
+        controls.enableDamping = true;
+        controls.target.set(0, 0, 0);
+        controls.update();
+
+        controls.addEventListener("change", () => onOrbit(player, canvas));
+        controls.addEventListener("end", () => onOrbit(player, canvas, "end"));
+
+        // Soften light shadows
+        player.lights = findElements(player, "PointLight", "all");
+
+        player.lights.forEach((light) => {
+          light.shadow.blurSamples = 25;
+          light.shadow.radius = 5;
+        });
+        // Load local model
+        loadLocalModel(player);
+      });
+
+      //TODO: In andere THREE TEST MODEL PROBEREN TE LADEN
+      function loadLocalModel(player) {
+        localLoader.load(
+          LOCAL_MODEL_URL,
+          (gltf) => {
+            player.localModel = gltf.scene;
+
+            player.localModel.traverse(function (node) {
+              if (node instanceof THREE.Mesh) {
+                node.castShadow = true;
+                node.material.side = THREE.DoubleSide;
+                // node.material = material;
+              }
+            });
+
+            player.localModel.position.set(0, 0, 0);
+            player.localModel.scale.set(10, 10, 10);
+            player.scene.add(player.localModel);
+            //NOTE: Moved player.play() to here
+            player.play();
+            console.log(`Local model = `, player.localModel);
+
+            createAnimations(player);
+          }, // called while loading is progressing
+          (xhr) => {
+            const progress = (xhr.loaded / xhr.total) * 100;
+            if (progress > 50 && loadProgress !== 50) {
+              console.log("model 50% loaded");
+              loadProgress = 50;
+            }
+            if (progress >= 100) console.log("model 100% loaded");
+          },
+          // called when loading has errors
+          (error) => {
+            console.log("An error happened while loading the model");
+          }
+        );
+      }
+
+      function createAnimations(player) {
+        // Get models
+        player.model = findElements(player, "Nespresso.glb");
+        player.lights = findElements(player, "PointLight", "all");
+        player.floorModel = findElements(player, "Plane");
+
+        if (player.model) {
+          gsap.to(player.model.position, {
+            duration: 10,
+            x: "-=4",
+            onUpdate: () => {
+              // console.log("update");
+            },
+            ease: "power2",
+            repeat: -1,
+            yoyo: true,
+          });
+        }
+
+        gsap.to([player.localModel.rotation], {
+          duration: 10,
+          y: 2 * Math.PI,
+          onUpdate: () => {
+            // console.log("update");
+          },
+          ease: "power2",
+          repeat: -1,
+          yoyo: true,
+        });
+        gsap.to([player.floorModel.rotation], {
+          duration: 10,
+          z: 2 * Math.PI,
+          onUpdate: () => {
+            // console.log("update");
+          },
+          ease: "power2",
+          repeat: -1,
+          yoyo: true,
+        });
+      }
+      function findElements(player, modelName, all) {
+        const {
+          scene: { children },
+        } = player;
+        const elements = children.filter((value) => value.name === modelName);
+        if (all) {
+          return elements;
+        } else {
+          return elements[0];
+        }
+      }
+
+      function onOrbit(player, canvas, end) {
+        canvas.style.cursor = end ? "default" : "pointer";
+      }
+
+      //NOTE: REMOVED ALL THE GEOMETRY IN APP.JSON
+      //NOTE: REMOVED three.module and OrbitControls
+      //NOTE: MAKE SURE YOU REMOVE ALL MESHES BELONGING TO A GROUP
+    </script>
+  </body>
+</html>
