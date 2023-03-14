@@ -21,6 +21,18 @@
     </style>
   </head>
   <body ontouchstart="">
+    <button
+      style="
+        position: absolute;
+        margin-left: 50vw;
+        margin-top: 2vh;
+        transform: translateX(-50%);
+      "
+      id="button"
+    >
+      Toggle Shadow Map
+    </button>
+
     <!-- NOTE: ADDED IMPORTMAP -->
     <script type="importmap">
       {
@@ -69,7 +81,6 @@
         });
 
         //NOTE: INSERT CODE HERE
-        console.log(player.camera);
         const canvas = player.dom.querySelector("canvas");
         const controls = new OrbitControls(player.camera, canvas);
 
@@ -85,8 +96,16 @@
 
         player.lights.forEach((light) => {
           light.shadow.blurSamples = 25;
+          light.intensity = 50;
           light.shadow.radius = 5;
+          // light.shadow.mapSize.width = 2100;
+          // light.shadow.mapSize.height = 2100;
         });
+
+        /*         // Add ambient light
+        const light = new THREE.AmbientLight(0x404040); // soft white light
+        light.layers(2); */
+
         // Load local model
         loadLocalModel(player);
       });
@@ -114,6 +133,9 @@
             console.log(`Local model = `, player.localModel);
 
             createAnimations(player);
+
+            // Add interaction
+            changeFloorMaterial(player);
           }, // called while loading is progressing
           (xhr) => {
             const progress = (xhr.loaded / xhr.total) * 100;
@@ -130,11 +152,39 @@
         );
       }
 
+      function changeFloorMaterial(player) {
+        const floorModel = findElements(player, "Plane");
+        const originalMaterialMap = floorModel.material.map;
+        const newMaterial = new THREE.MeshBasicMaterial({ map: undefined });
+
+        function noMap() {
+          floorModel.material.map = undefined;
+          floorModel.material.dispose();
+        }
+
+        function yesMap() {
+          floorModel.material.map = originalMaterialMap;
+          floorModel.material.dispose();
+        }
+
+        document
+          .querySelector("#button")
+          .addEventListener("click", function () {
+            if (floorModel.material.map) {
+              noMap();
+              return;
+            }
+            yesMap();
+          });
+      }
+
       function createAnimations(player) {
         // Get models
         player.model = findElements(player, "Nespresso.glb");
         player.lights = findElements(player, "PointLight", "all");
         player.floorModel = findElements(player, "Plane");
+
+        // Change material of floor model on click
 
         if (player.model) {
           gsap.to(player.model.position, {
