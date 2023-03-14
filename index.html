@@ -32,6 +32,18 @@
     >
       Toggle Shadow Map
     </button>
+    <button
+      style="
+        position: absolute;
+        margin-left: 50vw;
+        margin-top: calc(2vh + 50px);
+        transform: translateX(-50%);
+        visibility: hidden;
+      "
+      id="colorButton"
+    >
+      Black / White Floor Color
+    </button>
 
     <!-- NOTE: ADDED IMPORTMAP -->
     <script type="importmap">
@@ -158,13 +170,25 @@
         const newMaterial = new THREE.MeshBasicMaterial({ map: undefined });
 
         function noMap() {
+          document.querySelector("#colorButton").style.visibility = "visible";
           floorModel.material.map = undefined;
           floorModel.material.dispose();
         }
 
         function yesMap() {
+          document.querySelector("#colorButton").style.visibility = "hidden";
           floorModel.material.map = originalMaterialMap;
           floorModel.material.dispose();
+        }
+
+        function blackColor() {
+          const color = new THREE.Color("rgb(0, 0, 0)");
+          floorModel.material.color = color;
+        }
+
+        function whiteColor() {
+          const color = new THREE.Color("rgb(255, 255, 255)");
+          floorModel.material.color = color;
         }
 
         document
@@ -175,6 +199,16 @@
               return;
             }
             yesMap();
+          });
+
+        document
+          .querySelector("#colorButton")
+          .addEventListener("click", function () {
+            if (floorModel.material.color.r == 0) {
+              whiteColor();
+              return;
+            }
+            blackColor();
           });
       }
 
